@@ -1,0 +1,285 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <title>Tours</title>
+    <link href="lib/bootstrap/dist/css/bootstrap.css" rel="stylesheet" />
+    <script src="lib/jquery/dist/jquery.js"></script>
+    <link href="lib/jquery-ui/themes/base/jquery-ui.min.css" rel="stylesheet" />
+    <script src="lib/jquery-ui/jquery-ui.js"></script>
+    <script src="lib/jquery-ui/ui/i18n/datepicker-ru.js"></script>
+
+</head>
+<body>
+    <div class="container">
+        <h2>Tours list</h2>
+        <form name="tourForm">
+            <input type="hidden" name="id" value="0" />
+
+            <div class="form-group">
+                <label for="TourKind">tourKind:</label>
+                <select id="tourKindId" name="tourKindId"></select>
+            </div>
+
+            <div class="form-group">
+                <label for="Client">client:</label>
+                <select id="clientId" name="clientId"></select>
+            </div>
+
+            <div class="form-group">
+                <label for="Name">name:</label>
+                <input class="form-control" name="name" />
+            </div>
+
+            <div class="form-group">
+                <label for="Price">price:</label>
+                <input class="form-control" name="price" />
+            </div>
+
+            <div class="form-group">
+                <label for="StartDate">startDate:</label>
+                <input class="form-control" name="startDate" id="startDate" />
+            </div>
+
+            <div class="form-group">
+                <label for="EndDate">endDate:</label>
+                <input class="form-control" name="endDate" id="endDate" />
+            </div>
+
+            <div class="panel-body">
+                <button type="submit" class="btn btn-sm btn-primary">Save</button>
+                <a id="reset" class="btn btn-sm btn-primary">Reset</a>
+            </div>
+        </form>
+
+        <table class="table table-condensed table-striped table-bordered">
+            <thead><tr><th>Id</th><th>Tour kind</th><th>Client</th><th>Name</th><th>price</th><th>Start date</th><th>End date</th><th></th></tr></thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <script>
+
+
+
+        // Получение всех tour
+        function GetTours() {
+            $.ajax({
+                url: '/api/tours',
+                type: 'GET',
+                contentType: "application/json",
+                success: function (tours) {
+                    var rows = "";
+                    $.each(tours,
+                        function(index, tour) {
+                            // добавляем полученные элементы в таблицу
+                            rows += row(tour);
+                        });
+                    $("table tbody").append(rows);
+                 }
+            });
+        }
+        // Получение одного tour
+        function GetTour(id) {
+            $.ajax({
+                url: '/api/tours/'+id,
+                type: 'GET',
+                contentType: "application/json",
+                success: function (tour) {
+                    var form = document.forms["tourForm"];
+                    form.elements["id"].value = tour.id;
+                    form.elements["tourKindId"].value = tour.tourKindId;
+                    form.elements["clientId"].value = tour.clientId;
+                    form.elements["name"].value = tour.name;
+                    form.elements["price"].value = tour.price;
+                    form.elements["startDate"].value = tour.startDate.substring(0, 10);
+                    form.elements["endDate"].value = tour.endDate.substring(0, 10);
+                }
+            });
+        }
+        // Добавление tour
+        function CreateTour(tourKindId, clientId, name,price, startDate, endDate) {
+            $.ajax({
+                url: "api/tours",
+                contentType: "application/json",
+                method: "POST",
+                data: JSON.stringify({
+                    tourKindId: tourKindId,
+                    clientId: clientId,
+                    name: name,
+                    price: price,
+                    startDate: startDate,
+                    endDate: endDate
+                }),
+                success: function(tour) {
+                    reset();
+                    var form = document.forms["tourForm"];
+                    tour.tourKind = form.elements["tourKindId"].options[tourKindId].text;
+                    tour.client = form.elements["clientId"].options[clientId].text;
+
+                    $("table tbody").append(row(tour));
+                }
+            });
+        }
+        // Изменение tour
+        function EditTour(id,tourKindId, clientId, name, price, startDate, endDate) {
+            $.ajax({
+                url: "api/tours",
+                contentType: "application/json",
+                method: "PUT",
+                data: JSON.stringify({
+                    id: id,
+                    tourKindId: tourKindId,
+                    clientId: clientId,
+                    name: name,
+                    price: price,
+                    startDate: startDate,
+                    endDate: endDate
+                }),
+                success: function(tour) {
+                    reset();
+                    var form = document.forms["tourForm"];
+                    tour.tourKind = form.elements["tourKindId"].options[tourKindId].text;
+                    tour.client = form.elements["clientId"].options[clientId].text;
+
+                    $("tr[data-rowid='" + tour.id + "']").replaceWith(row(tour));
+
+                }
+            });
+        }
+
+        // сброс формы
+        function reset() {
+            var form = document.forms["tourForm"];
+            form.reset();
+            form.elements["id"].value = 0;
+        }
+
+        // Удаление tour
+        function DeleteTour(id) {
+            $.ajax({
+                url: "api/tours/" + id,
+                contentType: "application/json",
+                method: "DELETE",
+                success: function(tour) {
+                    $("tr[data-rowid='" + tour.id + "']").remove();
+                }
+            });
+        }
+        // создание строки для таблицы
+        var row = function (tour) {
+            return "<tr data-rowid='" + tour.id + "'><td>" + tour.id + "</td>" +
+                "<td>" + tour.tourKind + "</td> <td>" + tour.client + "</td> <td>" + tour.name + "</td> <td>" + tour.price + "</td> <td>" + tour.startDate.substring(0, 10) + "</td> <td>" + tour.endDate.substring(0, 10) + "</td>" +
+                "<td><a class='editLink' data-id='" + tour.id + "'>Edit</a> | " +
+                "<a class='removeLink' data-id='" + tour.id + "'>Delete</a></td></tr>";
+        }
+
+        // Получение списка brand
+        function GetToursList() {
+            var listItems = "";
+            $.ajax({
+                url: '/api/tours',
+                type: 'GET',
+                contentType: "application/json",
+                success: function (tours) {
+                    $.each(tours, function (index, tour) {
+                        listItems = listItems + "<option value='" + tour.id + "'>" + tour.tourKindId + "</option>";
+                    });
+                    $("#toursList").html(listItems);
+                }
+            });
+        }
+
+
+        // Получение списка brands
+        function GettourKinds() {
+            var listItems = "";
+            $.ajax({
+                url: '/api/tours/tourKinds',
+                type: 'GET',
+                contentType: "application/json",
+                success: function (tourKinds) {
+                    listItems = listItems + "<option value=0 selected>(select)</option>";
+                    $.each(tourKinds, function (index, tourKind) {
+                        listItems = listItems + "<option value='" + tourKind.id + "'>" + tourKind.name + "</option>";
+                    });
+                    $("#tourKindId").html(listItems);
+                }
+            });
+        }
+
+        // Получение списка owners
+        function Getclients() {
+            var listItems = "";
+            $.ajax({
+                url: '/api/tours/clients',
+                type: 'GET',
+                contentType: "application/json",
+                success: function (clients) {
+                    listItems = listItems + "<option value=0 selected>(select)</option>";
+                    $.each(clients, function (index, client) {
+                        listItems = listItems + "<option value='" + client.id + "'>" + client.name + "</option>";
+                    });
+                    $("#clientId").html(listItems);
+                }
+            });
+        }
+
+
+        // сброс значений формы
+        $("#reset").click(function(e) {
+
+            e.preventDefault();
+            reset();
+        });
+
+
+
+        // отправка формы
+        $("form").submit(function (e) {
+            e.preventDefault();
+            var id = this.elements["id"].value;
+            var tourKindId = this.elements["tourKindId"].value;
+            var clientId = this.elements["clientId"].value;
+            var name = this.elements["name"].value;
+            var price = this.elements["price"].value;
+            var startDate = this.elements["startDate"].value;
+            var endDate = this.elements["endDate"].value;
+            if (id == 0)
+                CreateTour(tourKindId, clientId, name, price, startDate, endDate);
+            else
+                EditTour(id,tourKindId, clientId, name, price, startDate, endDate);
+
+        });
+
+        // нажимаем на ссылку Изменить
+        $("body").on("click",
+            ".editLink",
+            function() {
+                var id = $(this).data("id");
+                GetTour(id);
+            });
+        // нажимаем на ссылку Удалить
+        $("body").on("click", ".removeLink", function () {
+            var id = $(this).data("id");
+            DeleteTour(id);
+        });
+        // загрузка tour
+        GetTours();
+        GetToursList();
+        GettourKinds();
+        Getclients();
+    </script>
+    <script type="text/javascript">
+        $(document).ready(function () {
+            $("#startDate").datepicker({ dateFormat: "yy-mm-dd" });
+        });
+        $(document).ready(function () {
+            $("#endDate").datepicker({ dateFormat: "yy-mm-dd" });
+        });
+    </script>
+
+    
+</body>
+</html>
